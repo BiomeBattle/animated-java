@@ -71,24 +71,24 @@ type ExportedKeyframe = {
 	post?: [string, string, string]
 	interpolation?:
 		| {
-				type: 'linear'
-				easing: EasingKey
-				easingArgs?: number[]
-		  }
+		type: 'linear'
+		easing: EasingKey
+		easingArgs?: number[]
+	}
 		| {
-				type: 'bezier'
-				bezier_linked?: boolean
-				bezier_left_time?: ArrayVector3
-				bezier_left_value?: ArrayVector3
-				bezier_right_time?: ArrayVector3
-				bezier_right_value?: ArrayVector3
-		  }
+		type: 'bezier'
+		bezier_linked?: boolean
+		bezier_left_time?: ArrayVector3
+		bezier_left_value?: ArrayVector3
+		bezier_right_time?: ArrayVector3
+		bezier_right_value?: ArrayVector3
+	}
 		| {
-				type: 'catmullrom'
-		  }
+		type: 'catmullrom'
+	}
 		| {
-				type: 'step'
-		  }
+		type: 'step'
+	}
 	commands?: string
 	variant?: string
 	execute_condition?: string
@@ -136,10 +136,16 @@ export interface IExportedJSON {
 	textures: Record<string, ExportedTexture>
 	nodes: Record<string, ExportedRenderedNode>
 	variants: Record<string, ExportedVariant>
-	/**
-	 * If `blueprint_settings.baked_animations` is true, this will be an array of `ExportedAnimation` objects. Otherwise, it will be an array of `AnimationUndoCopy` objects, just like the `.bbmodel`'s animation list.
-	 */
 	animations: Record<string, ExportedBakedAnimation> | Record<string, ExportedDynamicAnimation>
+	// --- BiomeBattle Start: flat bone location list
+	bone_locations?: Array<{
+		name: string
+		uuid: string
+		position: ArrayVector3
+		rotation: ArrayVector3
+		scale: ArrayVector3
+	}>
+	// --- BiomeBattle End
 }
 
 function transferKey(obj: any, oldKey: string, newKey: string) {
@@ -222,6 +228,26 @@ function serializeVariant(rig: IRenderedRig, variant: IRenderedVariant): Exporte
 	return json
 }
 
+// --- BiomeBattle Start: helper to get bone locations for flat list
+function getBoneLocations(rig: IRenderedRig): Array<{
+	name: string
+	uuid: string
+	position: ArrayVector3
+	rotation: ArrayVector3
+	scale: ArrayVector3
+}> {
+	return Object.values(rig.nodes)
+		.filter((node) => node.type === 'bone')
+		.map((node) => ({
+			name: node.name,
+			uuid: node.uuid,
+			position: node.default_transform.pos,
+			rotation: node.default_transform.rot,
+			scale: node.default_transform.scale,
+		}))
+}
+// --- BiomeBattle End
+
 export function exportJSON(options: {
 	rig: IRenderedRig
 	animations: IRenderedAnimation[]
@@ -258,6 +284,9 @@ export function exportJSON(options: {
 			serializeVariant(rig, variant),
 		]),
 		animations: {},
+		// --- BiomeBattle Start: flat bone location list
+		bone_locations: getBoneLocations(rig),
+		// --- BiomeBattle End
 	}
 
 	if (aj.baked_animations) {
